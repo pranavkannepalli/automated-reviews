@@ -19,7 +19,7 @@ Multi-organization review automation MVP built from the PRD in this repo.
 6. Run the SQL in [supabase/migrations/001_initial.sql](/home/kitts/Documents/dev/personal/automated-reviews/supabase/migrations/001_initial.sql) against your Supabase database.
 7. Install dependencies with `pnpm install`.
 8. Start the app with `pnpm dev`.
-9. Start the Temporal worker with `pnpm --filter @automated-reviews/temporal dev`.
+9. Start the Temporal worker with `pnpm --filter @automated-reviews/temporal dev`, or run it containerized with `docker compose -f docker-compose.temporal.yml up --build worker` (reads secrets from `apps/web/.env.local`; if you're using the Beeper fallback, that compose service points `BEEPER_API_URL` at `host.docker.internal` so the container can reach Beeper Desktop on your host machine).
 
 ## Product flow
 
