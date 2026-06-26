@@ -13,6 +13,7 @@ Multi-organization review automation MVP built from the PRD in this repo.
 1. Copy `apps/web/.env.example` to `apps/web/.env.local`.
 2. Fill in your Supabase project URL, anon key, and service role key.
 3. Add `TWILIO_AUTH_TOKEN` if you want live SMS sending.
+   - If an organization has no verified Twilio number yet, set `BEEPER_ACCESS_TOKEN` (and optionally `BEEPER_API_URL`/`BEEPER_ACCOUNT_ID`) to send the same messages from your own number through a locally running Beeper Desktop instead. Drop these once Twilio is verified.
 4. Add `SQUARE_WEBHOOK_SIGNATURE_KEY` if you want signature verification enabled.
 5. Set `TEMPORAL_ADDRESS` and `TEMPORAL_NAMESPACE` if you want delayed sends and reminder scheduling.
 6. Run the SQL in [supabase/migrations/001_initial.sql](/home/kitts/Documents/dev/personal/automated-reviews/supabase/migrations/001_initial.sql) against your Supabase database.

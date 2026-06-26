@@ -9,6 +9,55 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const beeperAccessToken = process.env.BEEPER_ACCESS_TOKEN;
+const beeperApiUrl = process.env.BEEPER_API_URL ?? "http://127.0.0.1:23373";
+const beeperAccountId = process.env.BEEPER_ACCOUNT_ID;
+
+function hasBeeperEnv() {
+  return Boolean(beeperAccessToken);
+}
+
+// Sends from the owner's own bridged number via Beeper Desktop, as a
+// stand-in until Twilio numbers are verified for an organization.
+async function sendBeeperMessage(to: string, body: string) {
+  if (!beeperAccessToken) {
+    throw new Error("BEEPER_ACCESS_TOKEN is required to send via Beeper.");
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${beeperAccessToken}`,
+  };
+
+  const chatResponse = await fetch(`${beeperApiUrl}/v1/chats`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      mode: "start",
+      phoneNumber: to,
+      ...(beeperAccountId ? { accountID: beeperAccountId } : {}),
+    }),
+  });
+
+  if (!chatResponse.ok) {
+    throw new Error(`Beeper chat lookup failed with ${chatResponse.status}`);
+  }
+
+  const chat = await chatResponse.json();
+
+  const messageResponse = await fetch(`${beeperApiUrl}/v1/chats/${chat.chatID}/messages`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ text: body }),
+  });
+
+  if (!messageResponse.ok) {
+    throw new Error(`Beeper send failed with ${messageResponse.status}`);
+  }
+
+  const message = await messageResponse.json();
+  return { sid: (message.messageID as string | undefined) ?? null, status: "sent" };
+}
 
 function getSupabase() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -79,10 +128,13 @@ async function insertMessageEvent(supabase: any, payload: Record<string, unknown
 export async function sendInitialReviewRequest(reviewRequestId: string) {
   const { supabase, reviewRequest, organization, settings, customer } = await getRequestBundle(reviewRequestId);
 
-  if (!settings?.auto_send_enabled || !settings?.twilio_account_sid || !settings?.twilio_phone_number || !customer?.phone) {
+  const canSendViaTwilio = Boolean(settings?.twilio_account_sid && settings?.twilio_phone_number);
+
+  if (!settings?.auto_send_enabled || !customer?.phone || (!canSendViaTwilio && !hasBeeperEnv())) {
     return;
   }
 
+  const provider = canSendViaTwilio ? "twilio" : "beeper";
   const body = await generateInitialAskMessage({ organizationName: organization.name });
 
   await insertMessageEvent(supabase, {
@@ -90,7 +142,7 @@ export async function sendInitialReviewRequest(reviewRequestId: string) {
     review_request_id: reviewRequest.id,
     payment_event_id: reviewRequest.payment_event_id,
     customer_id: reviewRequest.customer_id,
-    provider: "twilio",
+    provider,
     direction: "outbound",
     message_type: "sms_send_attempted",
     status: "attempted",
@@ -98,13 +150,15 @@ export async function sendInitialReviewRequest(reviewRequestId: string) {
     occurred_at: new Date().toISOString(),
   });
 
-  const client = getTwilioClient(settings.twilio_account_sid);
-  const message = await client.messages.create({
-    body,
-    from: settings.twilio_phone_number,
-    to: customer.phone,
-    statusCallback: `${appUrl}/api/webhooks/twilio?reviewRequestId=${reviewRequest.id}`,
-  });
+  const message =
+    provider === "twilio"
+      ? await getTwilioClient(settings.twilio_account_sid).messages.create({
+          body,
+          from: settings.twilio_phone_number,
+          to: customer.phone,
+          statusCallback: `${appUrl}/api/webhooks/twilio?reviewRequestId=${reviewRequest.id}`,
+        })
+      : await sendBeeperMessage(customer.phone, body);
 
   await supabase
     .from("review_requests")
@@ -119,7 +173,7 @@ export async function sendInitialReviewRequest(reviewRequestId: string) {
     review_request_id: reviewRequest.id,
     payment_event_id: reviewRequest.payment_event_id,
     customer_id: reviewRequest.customer_id,
-    provider: "twilio",
+    provider,
     provider_message_sid: message.sid,
     direction: "outbound",
     message_type: "sms_sent",
@@ -132,7 +186,9 @@ export async function sendInitialReviewRequest(reviewRequestId: string) {
 export async function sendReviewReminderIfNeeded(reviewRequestId: string) {
   const { supabase, reviewRequest, organization, settings, customer, feedback } = await getRequestBundle(reviewRequestId);
 
-  if (!settings?.auto_send_enabled || !settings?.twilio_account_sid || !settings?.twilio_phone_number || !customer?.phone) {
+  const canSendViaTwilio = Boolean(settings?.twilio_account_sid && settings?.twilio_phone_number);
+
+  if (!settings?.auto_send_enabled || !customer?.phone || (!canSendViaTwilio && !hasBeeperEnv())) {
     return;
   }
 
@@ -149,18 +205,21 @@ export async function sendReviewReminderIfNeeded(reviewRequestId: string) {
     return;
   }
 
+  const provider = canSendViaTwilio ? "twilio" : "beeper";
   const trackedLink = `${appUrl}/r/${reviewRequest.tracking_token}`;
   const body = await generateReminderMessage({
     trackedReviewUrl: trackedLink,
     organizationName: organization.name,
   });
-  const client = getTwilioClient(settings.twilio_account_sid);
-  const message = await client.messages.create({
-    body,
-    from: settings.twilio_phone_number,
-    to: customer.phone,
-    statusCallback: `${appUrl}/api/webhooks/twilio?reviewRequestId=${reviewRequest.id}`,
-  });
+  const message =
+    provider === "twilio"
+      ? await getTwilioClient(settings.twilio_account_sid).messages.create({
+          body,
+          from: settings.twilio_phone_number,
+          to: customer.phone,
+          statusCallback: `${appUrl}/api/webhooks/twilio?reviewRequestId=${reviewRequest.id}`,
+        })
+      : await sendBeeperMessage(customer.phone, body);
 
   await supabase
     .from("review_requests")
@@ -175,7 +234,7 @@ export async function sendReviewReminderIfNeeded(reviewRequestId: string) {
     review_request_id: reviewRequest.id,
     payment_event_id: reviewRequest.payment_event_id,
     customer_id: reviewRequest.customer_id,
-    provider: "twilio",
+    provider,
     provider_message_sid: message.sid,
     direction: "outbound",
     message_type: "review_reminder_sent",
