@@ -5,7 +5,7 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 allowBuilds:
-  '@google/genai': set this to true or false
+  '@google/genai': true
   '@swc/core': true
   esbuild: true
   protobufjs: true

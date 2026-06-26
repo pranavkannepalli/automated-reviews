@@ -1,6 +1,8 @@
 import { Client, Connection } from "@temporalio/client";
 import {
   REVIEWS_TASK_QUEUE,
+  getTemporalClientConnectionOptions,
+  getTemporalNamespace,
   type ScheduleInitialReviewRequestInput,
   type ScheduleReviewReminderInput,
 } from "@automated-reviews/temporal";
@@ -13,11 +15,11 @@ async function getTemporalClient() {
   }
 
   if (!temporalClientPromise) {
-    temporalClientPromise = Connection.connect({
-      address: process.env.TEMPORAL_ADDRESS,
-    }).then((connection) => new Client({
+    temporalClientPromise = Connection.connect(
+      getTemporalClientConnectionOptions(),
+    ).then((connection) => new Client({
       connection,
-      namespace: process.env.TEMPORAL_NAMESPACE || "default",
+      namespace: getTemporalNamespace(),
     }));
   }
 

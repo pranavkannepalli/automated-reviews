@@ -9,7 +9,7 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint && pnpm --filter @automated-reviews/core lint && pnpm --filter @automated-reviews/temporal lint",
     "typecheck": "pnpm --filter web typecheck && pnpm --filter @automated-reviews/core typecheck && pnpm --filter @automated-reviews/temporal typecheck",
-    "test": "pnpm --filter @automated-reviews/core test"
+    "test": "pnpm --filter @automated-reviews/core test && pnpm --filter @automated-reviews/temporal test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
