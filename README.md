@@ -30,6 +30,7 @@ Multi-organization review automation MVP built from the PRD in this repo.
 - Send Twilio inbound messages and delivery callbacks to `POST /api/webhooks/twilio`.
 - Positive review prompts use tracked links at `/r/:token` so the platform can detect clicks.
 - Delayed initial asks and 2-day reminder logic run through the Temporal worker when configured.
+- Beeper has no inbound webhook, so when the initial ask goes out via Beeper, the Temporal worker polls the Beeper Desktop API once a minute (for up to 24h) to catch the customer's reply, classify it, answer questions, and send the review link as soon as it looks like positive feedback. Drop this once Twilio numbers are verified and replies arrive via the Twilio webhook instead.
 
 ## Testing without the website
 

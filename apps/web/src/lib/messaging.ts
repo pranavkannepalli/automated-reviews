@@ -1,10 +1,6 @@
 import twilio from "twilio";
 
-import {
-  generateFollowUpMessage,
-  generateInitialAskMessage,
-  type SentimentBucket,
-} from "@automated-reviews/core";
+import { generateFollowUpMessage, generateInitialAskMessage } from "@automated-reviews/core";
 
 import { sendBeeperMessage } from "./beeper";
 import { getAppUrl, hasBeeperEnv, hasTwilioEnv } from "./env";
@@ -83,18 +79,24 @@ export async function getInitialMessageBody(organizationName: string) {
 }
 
 export async function getFollowUpMessageBody({
-  bucket,
+  isFeedback,
+  sentiment,
+  isQuestion,
   trackedReviewUrl,
   customerReply,
   organizationName,
 }: {
-  bucket: SentimentBucket;
+  isFeedback: boolean;
+  sentiment: "positive" | "negative" | null;
+  isQuestion: boolean;
   trackedReviewUrl: string | null;
   customerReply: string;
   organizationName: string;
 }) {
   return generateFollowUpMessage({
-    bucket,
+    isFeedback,
+    sentiment,
+    isQuestion,
     trackedReviewUrl,
     customerReply,
     organizationName,

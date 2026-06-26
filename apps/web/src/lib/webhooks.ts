@@ -410,7 +410,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
       score: parsed.score,
       free_text: parsed.freeText,
       sentiment_bucket: parsed.bucket,
-      owner_follow_up_required: parsed.bucket === "negative",
+      owner_follow_up_required: parsed.bucket === "negative" || parsed.isQuestion,
       review_prompt_sent: false,
     })
     .select("id")
@@ -424,7 +424,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
     .from("review_requests")
     .update({
       replied_at: new Date().toISOString(),
-      status: parsed.bucket === "unknown" ? "awaiting_follow_up" : "responded",
+      status: parsed.isFeedback ? "responded" : "awaiting_follow_up",
     })
     .eq("id", reviewRequest.id);
 
@@ -433,7 +433,9 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
       ? buildTrackedReviewUrl(reviewRequest.tracking_token)
       : null;
   const followUpBody = await getFollowUpMessageBody({
-    bucket: parsed.bucket,
+    isFeedback: parsed.isFeedback,
+    sentiment: parsed.bucket === "unknown" ? null : parsed.bucket,
+    isQuestion: parsed.isQuestion,
     trackedReviewUrl,
     customerReply: body,
     organizationName: organizationSetting.organization.name,
@@ -461,7 +463,9 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
           ? "review_prompt_sent"
           : parsed.bucket === "negative"
             ? "owner_follow_up_flagged"
-            : "feedback_unknown",
+            : parsed.isQuestion
+              ? "question_answered"
+              : "feedback_unknown",
       status: followUp.status,
       message_body: followUpBody,
       occurred_at: new Date().toISOString(),

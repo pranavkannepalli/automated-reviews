@@ -10,12 +10,14 @@ describe("parseGeneratedReplyAnalysis", () => {
   test("parses a valid JSON reply analysis payload", () => {
     expect(
       parseGeneratedReplyAnalysis(
-        '{"score":5,"freeText":"Very friendly staff","bucket":"positive","reviewPromptEligible":true}',
+        '{"isFeedback":true,"sentiment":"positive","isQuestion":false,"score":5,"freeText":"Very friendly staff"}',
       ),
     ).toEqual({
       score: 5,
       freeText: "Very friendly staff",
       bucket: "positive",
+      isFeedback: true,
+      isQuestion: false,
       reviewPromptEligible: true,
     });
   });
@@ -23,18 +25,35 @@ describe("parseGeneratedReplyAnalysis", () => {
   test("extracts the first JSON object from wrapped model output", () => {
     expect(
       parseGeneratedReplyAnalysis(
-        'Sure, here you go:\n{"score":2,"freeText":"Wait was too long","bucket":"negative","reviewPromptEligible":false}',
+        'Sure, here you go:\n{"isFeedback":true,"sentiment":"negative","isQuestion":false,"score":2,"freeText":"Wait was too long"}',
       ),
     ).toEqual({
       score: 2,
       freeText: "Wait was too long",
       bucket: "negative",
+      isFeedback: true,
+      isQuestion: false,
       reviewPromptEligible: false,
     });
   });
 
-  test("rejects malformed payloads", () => {
-    expect(parseGeneratedReplyAnalysis('{"bucket":"excellent"}')).toBeNull();
+  test("treats a question as not-feedback and not positive/negative", () => {
+    expect(
+      parseGeneratedReplyAnalysis(
+        '{"isFeedback":false,"sentiment":null,"isQuestion":true,"score":null,"freeText":"What time do you close?"}',
+      ),
+    ).toEqual({
+      score: null,
+      freeText: "What time do you close?",
+      bucket: "unknown",
+      isFeedback: false,
+      isQuestion: true,
+      reviewPromptEligible: false,
+    });
+  });
+
+  test("rejects payloads that claim feedback without a sentiment", () => {
+    expect(parseGeneratedReplyAnalysis('{"isFeedback":true,"sentiment":null,"isQuestion":false}')).toBeNull();
   });
 });
 
