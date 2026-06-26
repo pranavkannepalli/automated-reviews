@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch --env-file ../../apps/web/.env.local src/worker.ts",
+    "test:workflow": "tsx --env-file ../../apps/web/.env.local scripts/test-workflow.ts",
     "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

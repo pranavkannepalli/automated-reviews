@@ -31,6 +31,11 @@ Multi-organization review automation MVP built from the PRD in this repo.
 - Positive review prompts use tracked links at `/r/:token` so the platform can detect clicks.
 - Delayed initial asks and 2-day reminder logic run through the Temporal worker when configured.
 
+## Testing without the website
+
+- `node scripts/test-beeper-send.mjs +15551234567 "test message"` checks the Beeper Desktop API directly (no app, DB, or Temporal involved).
+- `pnpm --filter @automated-reviews/temporal test:workflow +15551234567` seeds a throwaway test organization/customer/payment/review-request in Supabase and starts `scheduleInitialReviewRequestWorkflow` for it, end to end. It connects with the same `TEMPORAL_ADDRESS`/`TEMPORAL_API_KEY`/`TEMPORAL_NAMESPACE` env vars the worker uses, so it works against a local dev server or Temporal Cloud -- just make sure a worker is already running and polling the `automated-reviews` task queue against that same deployment before starting the script, otherwise it hangs waiting for a result.
+
 ## Verification commands
 
 - `pnpm test`
