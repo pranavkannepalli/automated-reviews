@@ -195,7 +195,12 @@ export async function seedMockPaymentEventAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase: any = await createSupabaseServerClient();
   const organizationId = String(formData.get("organizationId") ?? "");
+  const phoneNumber = String(formData.get("phoneNumber") ?? "").trim();
   const scenario = MOCK_STORE_SCENARIOS[Math.floor(Math.random() * MOCK_STORE_SCENARIOS.length)];
+
+  if (!phoneNumber) {
+    return { error: "A phone number is required." };
+  }
 
   const { data: membership } = await supabase
     .from("organization_members")
@@ -247,7 +252,7 @@ export async function seedMockPaymentEventAction(
           customer_details: {
             given_name: scenario.firstName,
             family_name: scenario.lastName,
-            phone_number: scenario.phone,
+            phone_number: phoneNumber,
           },
         },
       },
@@ -255,16 +260,37 @@ export async function seedMockPaymentEventAction(
   };
 
   const result = await processSquareWebhook(payload);
+  const reviewRequestId = "reviewRequestId" in result && typeof result.reviewRequestId === "string"
+    ? result.reviewRequestId
+    : null;
+
+  if (!reviewRequestId) {
+    revalidatePath("/app");
+
+    return {
+      error: "A mock payment was created, but no review request was returned.",
+      details: formatDemoDetails([
+        `store: ${scenario.storeName}`,
+        `payment_event: ${payload.event_id}`,
+        `customer_phone: ${phoneNumber}`,
+        `result: ${JSON.stringify(result)}`,
+      ]),
+    };
+  }
+
+  const sendResult = await sendInitialReviewRequestNow(reviewRequestId);
   revalidatePath("/app");
 
   return {
-    success: "Mock Square payment created.",
+    success: "Sample payment created and the first message was processed.",
     details: formatDemoDetails([
       `store: ${scenario.storeName}`,
       `payment_event: ${payload.event_id}`,
       `payment_id: ${payload.data.object.payment.id}`,
       `location_id: ${locationId}`,
-      `customer: ${scenario.firstName} ${scenario.lastName} (${scenario.phone})`,
+      `customer: ${scenario.firstName} ${scenario.lastName} (${phoneNumber})`,
+      `review_request: ${reviewRequestId}`,
+      `send_mode: ${sendResult.mode}`,
       `result: ${JSON.stringify(result)}`,
     ]),
   };

@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { Beaker, ChevronDown, MessageSquareShare } from "lucide-react";
+import { Beaker, ChevronDown } from "lucide-react";
 
 import {
-  forceFirstMessageAction,
   seedMockPaymentEventAction,
   type DemoActionState,
 } from "@/lib/actions";
@@ -13,7 +12,6 @@ const INITIAL_STATE: DemoActionState = {};
 
 export function DemoControls({ organizationId }: { organizationId: string }) {
   const [seedState, seedAction, seedPending] = useActionState(seedMockPaymentEventAction, INITIAL_STATE);
-  const [sendState, sendAction, sendPending] = useActionState(forceFirstMessageAction, INITIAL_STATE);
 
   return (
     <details className="group rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fafc_100%)] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.05)]">
@@ -32,28 +30,18 @@ export function DemoControls({ organizationId }: { organizationId: string }) {
 
       <div className="mt-5 rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_36%),linear-gradient(180deg,#f8fbff_0%,#f5f7fb_100%)] p-4">
         <div className="rounded-[22px] border border-dashed border-slate-300 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-500">
-          Use these tools only if you need to simulate data during a walkthrough. They create a mock payment event and can force the first message without waiting on the normal delay.
+          Use this only if you need to simulate a real customer during a walkthrough. It creates a mock payment for the phone number you enter and immediately sends the first message.
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4">
           <DemoCard
-            title="Create sample payment"
-            description="Generates a realistic test payment and queues a fresh review request."
+            title="Send a sample customer through the flow"
+            description="Enter a phone number to create a realistic payment event, open a review request, and trigger the first outbound message in one step."
             icon={<Beaker className="h-5 w-5" />}
             pending={seedPending}
             action={seedAction}
             state={seedState}
-            buttonLabel="Create sample event"
-            organizationId={organizationId}
-          />
-          <DemoCard
-            title="Send first message now"
-            description="Immediately processes the first outbound text for the newest queued request."
-            icon={<MessageSquareShare className="h-5 w-5" />}
-            pending={sendPending}
-            action={sendAction}
-            state={sendState}
-            buttonLabel="Send now"
+            buttonLabel="Create event and send message"
             organizationId={organizationId}
           />
         </div>
@@ -87,6 +75,16 @@ function DemoCard({
       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">{icon}</div>
       <h3 className="mt-5 text-base font-semibold text-slate-950">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+      <label className="mt-5 block space-y-2">
+        <span className="text-sm font-medium text-slate-700">Customer phone number</span>
+        <input
+          name="phoneNumber"
+          type="tel"
+          required
+          placeholder="+14155550123"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500"
+        />
+      </label>
       <button
         type="submit"
         disabled={pending}
