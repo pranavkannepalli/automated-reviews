@@ -10,21 +10,21 @@ export default async function DashboardPage() {
 
   if (!memberships.length || !activeMembership) {
     return (
-      <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-[32px] border border-white/8 bg-slate-950/80 p-6">
-          <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Organization bootstrap</p>
-          <h1 className="mt-4 text-3xl font-semibold text-white">Create your first workspace</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-300">
-            This app is multi-organization by default. Bootstrap one workspace now, then wire in your Square location and Twilio number from settings.
+      <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="rounded-[36px] border border-slate-200 bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Workspace setup</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">Create your first location</h1>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
+            Start with the business you want to present tomorrow. Once the workspace is created, you can connect Square, choose your sending number, and tailor the review destination.
           </p>
         </section>
-        <form action={bootstrapOrganizationAction} className="rounded-[32px] border border-white/8 bg-slate-950/80 p-6">
+        <form action={bootstrapOrganizationAction} className="rounded-[36px] border border-slate-200 bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
           <div className="grid gap-4">
             <Field label="Organization name" name="name" placeholder="Northstar Dental" />
             <Field label="Business type" name="businessType" placeholder="Dental clinic" />
             <Field label="Primary brand color" name="primaryColor" placeholder="#2dd4bf" defaultValue="#2dd4bf" />
-            <button type="submit" className="mt-2 rounded-2xl bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950">
-              Create workspace
+            <button type="submit" className="mt-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
+              Create location
             </button>
           </div>
         </form>
@@ -64,12 +64,12 @@ function Field({
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-sm font-medium text-slate-200">{label}</span>
+      <span className="text-sm font-medium text-slate-700">{label}</span>
       <input
         name={name}
         placeholder={placeholder}
         defaultValue={defaultValue}
-        className="w-full rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500"
       />
     </label>
   );

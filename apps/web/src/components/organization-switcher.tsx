@@ -30,7 +30,7 @@ export function OrganizationSwitcher({
           window.location.reload();
         });
       }}
-      className="rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm text-white outline-none"
+      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none hover:border-slate-300"
       disabled={pending}
     >
       {organizations.map((organization) => (

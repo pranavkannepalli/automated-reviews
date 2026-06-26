@@ -12,10 +12,10 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm uppercase tracking-[0.28em] text-slate-500">Active organization settings</p>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Routing and branding</h1>
-        <p className="mt-2 max-w-2xl text-base leading-7 text-slate-300">
-          Configure the review links, Twilio sender, Square location, message delay, and public testimonial widget that control the automation flow.
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Configuration</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">Brand, routing, and live integrations</h1>
+        <p className="mt-3 max-w-3xl text-base leading-8 text-slate-600">
+          This is where you choose the review destination, connect the Twilio sender, map the Square location, and publish the testimonial widget you want customers to see.
         </p>
       </div>
       <SettingsForm membership={activeMembership} />

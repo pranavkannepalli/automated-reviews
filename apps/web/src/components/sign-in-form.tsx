@@ -10,7 +10,7 @@ export function SignInForm() {
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-200" htmlFor="email">
+        <label className="text-sm font-medium text-slate-700" htmlFor="email">
           Work email
         </label>
         <input
@@ -19,33 +19,33 @@ export function SignInForm() {
           type="email"
           required
           placeholder="owner@northstar.com"
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500"
         />
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-200" htmlFor="password">
+        <label className="text-sm font-medium text-slate-700" htmlFor="password">
           Password
         </label>
         <input
           id="password"
           name="password"
           type="password"
-          placeholder="Optional. Use for direct sign-in."
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+          placeholder="Optional if you are using a shared internal demo account."
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500"
         />
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-2xl bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? "Signing in..." : "Sign in"}
+        {pending ? "Signing in..." : "Continue"}
       </button>
       <p className="text-xs leading-5 text-slate-500">
-        Leave password blank to use a magic link. Add a password to sign in directly with a shared demo account.
+        Leave the password blank to receive a secure magic link. Use a password only if your team already maintains a direct sign-in account.
       </p>
-      {state?.error ? <p className="text-sm text-rose-300">{state.error}</p> : null}
-      {state?.success ? <p className="text-sm text-emerald-300">{state.success}</p> : null}
+      {state?.error ? <p className="text-sm text-rose-700">{state.error}</p> : null}
+      {state?.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
     </form>
   );
 }

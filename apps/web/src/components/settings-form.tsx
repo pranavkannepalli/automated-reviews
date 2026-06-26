@@ -15,9 +15,9 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
       <input type="hidden" name="organizationId" value={organization.id} />
 
       <div className="grid gap-8 xl:grid-cols-[1.2fr_1fr]">
-        <section className="rounded-[32px] border border-white/8 bg-slate-950/80 p-6">
-          <h2 className="text-xl font-semibold text-white">Organization profile</h2>
-          <p className="mt-1 text-sm text-slate-400">Brand, routing, and presentation settings for the active workspace.</p>
+        <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+          <h2 className="text-xl font-semibold text-slate-950">Business profile</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Update the business identity that appears across the dashboard and public widget.</p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <Field label="Organization name" name="name" defaultValue={organization.name} />
             <Field label="Slug" name="slug" defaultValue={organization.slug} />
@@ -28,18 +28,18 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-white/8 bg-slate-950/80 p-6">
-          <h2 className="text-xl font-semibold text-white">Messaging + payments</h2>
-          <p className="mt-1 text-sm text-slate-400">Twilio and Square IDs used to route and deliver events.</p>
+        <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+          <h2 className="text-xl font-semibold text-slate-950">Messaging and payments</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Connect the live destinations and IDs that power the outbound review flow.</p>
           <div className="mt-6 grid gap-4">
             <Field label="Google review URL" name="googleReviewUrl" defaultValue={settings?.google_review_url ?? ""} />
             <Field
-              label="Tracked review destination URL"
+              label="Primary review destination URL"
               name="reviewDestinationUrl"
               defaultValue={settings?.review_destination_url ?? ""}
             />
             <Field label="Yelp review URL" name="yelpReviewUrl" defaultValue={settings?.yelp_review_url ?? ""} />
-            <Field label="Twilio number" name="twilioPhoneNumber" defaultValue={settings?.twilio_phone_number ?? ""} />
+            <Field label="Twilio sending number" name="twilioPhoneNumber" defaultValue={settings?.twilio_phone_number ?? ""} />
             <Field label="Twilio account SID" name="twilioAccountSid" defaultValue={settings?.twilio_account_sid ?? ""} />
             <Field label="Square location ID" name="squareLocationId" defaultValue={settings?.square_location_id ?? ""} />
             <Field
@@ -48,21 +48,21 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
               defaultValue={String(settings?.message_delay_minutes ?? 120)}
               type="number"
             />
-            <label className="flex items-center justify-between rounded-3xl border border-white/8 bg-white/3 px-4 py-4">
+            <label className="flex items-center justify-between rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div>
-                <p className="text-sm font-medium text-white">Auto-send SMS after payment</p>
-                <p className="mt-1 text-sm text-slate-400">Disable this to queue review requests without sending immediately.</p>
+                <p className="text-sm font-medium text-slate-950">Send review messages automatically</p>
+                <p className="mt-1 text-sm leading-6 text-slate-500">Turn this off if you want to review requests manually before outreach goes out.</p>
               </div>
               <input
                 type="checkbox"
                 name="autoSendEnabled"
                 defaultChecked={settings?.auto_send_enabled ?? true}
-                className="h-5 w-5 accent-cyan-300"
+                className="h-5 w-5 accent-slate-950"
               />
             </label>
             <button
               type="submit"
-              className="mt-2 rounded-2xl bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950"
+              className="mt-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
             >
               Save settings
             </button>
@@ -70,12 +70,12 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
         </section>
       </div>
 
-      <section className="rounded-[32px] border border-white/8 bg-slate-950/80 p-6">
+      <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
         <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <h2 className="text-xl font-semibold text-white">Public testimonial widget</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-400">
-              Embed recent positive customer feedback anywhere with a public iframe. The widget pulls from positive SMS responses already stored in this organization.
+            <h2 className="text-xl font-semibold text-slate-950">Public testimonial widget</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Publish recent positive customer feedback on the website with a simple iframe. The widget pulls from positive SMS responses already captured inside this organization.
             </p>
             <div className="mt-6 space-y-4">
               <InfoRow label="Public widget URL" value={widgetUrl} />
@@ -86,9 +86,9 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
           <div className="space-y-5">
             <CodeBlock label="Default iframe embed" value={defaultEmbedCode} />
             <CodeBlock label="Styled iframe embed example" value={themedEmbedCode} />
-            <div className="rounded-3xl border border-white/8 bg-white/3 p-4 text-sm text-slate-300">
-              <p className="font-medium text-white">Theme params</p>
-              <p className="mt-2 leading-6 text-slate-400">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="font-medium text-slate-950">Theme parameters</p>
+              <p className="mt-2 leading-6 text-slate-500">
                 Supported query params: `layout`, `bg`, `surface`, `text`, `muted`, `accent`, `border`, `radius`, `showHeader`, `showStars`, `autoplay`, `intervalMs`.
               </p>
             </div>
@@ -112,12 +112,12 @@ function Field({
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-sm font-medium text-slate-200">{label}</span>
+      <span className="text-sm font-medium text-slate-700">{label}</span>
       <input
         name={name}
         defaultValue={defaultValue}
         type={type}
-        className="w-full rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500"
       />
     </label>
   );
@@ -125,16 +125,16 @@ function Field({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-3xl border border-white/8 bg-white/3 px-4 py-4">
+    <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
       <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className="mt-2 break-all text-sm font-medium text-white">{value}</p>
+      <p className="mt-2 break-all text-sm font-medium text-slate-950">{value}</p>
     </div>
   );
 }
 
 function CodeBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-3xl border border-white/8 bg-[#020617] p-4">
+    <div className="rounded-3xl border border-slate-200 bg-slate-950 p-4">
       <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{label}</p>
       <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-cyan-100">
         <code>{value}</code>

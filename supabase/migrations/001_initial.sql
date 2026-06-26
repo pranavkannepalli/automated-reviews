@@ -1,4 +1,4 @@
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -90,7 +90,7 @@ create table if not exists public.review_requests (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   payment_event_id uuid not null references public.payment_events(id) on delete cascade,
   customer_id uuid references public.customers(id) on delete set null,
-  tracking_token text not null default encode(gen_random_bytes(18), 'hex'),
+  tracking_token text not null default encode(extensions.gen_random_bytes(18), 'hex'),
   review_destination_url text,
   channel text not null default 'sms',
   status text not null default 'queued',
