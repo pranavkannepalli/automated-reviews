@@ -2,9 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildInitialAskCopy,
+  buildNeutralAckCopy,
   buildPositiveFollowUpCopy,
+  buildQuestionFallbackCopy,
   buildReminderFollowUpCopy,
-  buildUnknownReplyCopy,
   getSentimentBucket,
   normalizeSquarePayment,
   parseFeedbackReply,
@@ -15,6 +16,8 @@ describe("parseFeedbackReply", () => {
     expect(parseFeedbackReply("5 Amazing service")).toEqual({
       bucket: "positive",
       freeText: "Amazing service",
+      isFeedback: true,
+      isQuestion: false,
       reviewPromptEligible: true,
       score: 5,
     });
@@ -24,15 +27,41 @@ describe("parseFeedbackReply", () => {
     expect(parseFeedbackReply("2 cold fries")).toEqual({
       bucket: "negative",
       freeText: "cold fries",
+      isFeedback: true,
+      isQuestion: false,
       reviewPromptEligible: false,
       score: 2,
     });
   });
 
-  test("returns unknown when reply does not contain a score", () => {
+  test("recognizes free-text positive feedback without a score", () => {
     expect(parseFeedbackReply("pretty good")).toEqual({
-      bucket: "unknown",
+      bucket: "positive",
       freeText: "pretty good",
+      isFeedback: true,
+      isQuestion: false,
+      reviewPromptEligible: true,
+      score: null,
+    });
+  });
+
+  test("flags a question and does not treat it as feedback", () => {
+    expect(parseFeedbackReply("what are your hours?")).toEqual({
+      bucket: "unknown",
+      freeText: "what are your hours?",
+      isFeedback: false,
+      isQuestion: true,
+      reviewPromptEligible: false,
+      score: null,
+    });
+  });
+
+  test("returns unknown when reply has no sentiment signal", () => {
+    expect(parseFeedbackReply("ok")).toEqual({
+      bucket: "unknown",
+      freeText: "ok",
+      isFeedback: false,
+      isQuestion: false,
       reviewPromptEligible: false,
       score: null,
     });
@@ -42,7 +71,7 @@ describe("parseFeedbackReply", () => {
 describe("message copy", () => {
   test("builds the initial ask with organization name", () => {
     expect(buildInitialAskCopy("Northstar Dental")).toBe(
-      "Thanks for visiting Northstar Dental. How was your experience today? Reply 1-5.",
+      "Thanks for visiting Northstar Dental! How did everything go?",
     );
   });
 
@@ -58,10 +87,14 @@ describe("message copy", () => {
     );
   });
 
-  test("keeps the unknown reply copy deterministic", () => {
-    expect(buildUnknownReplyCopy()).toBe(
-      "Thanks. Could you reply with a number from 1 to 5?",
+  test("keeps the question fallback copy deterministic", () => {
+    expect(buildQuestionFallbackCopy()).toBe(
+      "Thanks for asking -- someone from our team will get back to you shortly.",
     );
+  });
+
+  test("keeps the neutral ack copy deterministic", () => {
+    expect(buildNeutralAckCopy()).toBe("Thanks for letting us know!");
   });
 });
 

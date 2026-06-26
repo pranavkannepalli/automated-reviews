@@ -18,3 +18,23 @@ services:
     ports:
       - "7233:7233"
       - "8233:8233"
+
+  worker:
+    build:
+      context: .
+      dockerfile: packages/temporal/Dockerfile
+    container_name: automated_reviews_worker
+    depends_on:
+      - temporal
+    env_file:
+      - apps/web/.env.local
+    environment:
+      # Reach the temporal service over the compose network, not localhost.
+      TEMPORAL_ADDRESS: temporal:7233
+      # Override whatever's in .env.local: from inside this container,
+      # Beeper Desktop is on the host, not on 127.0.0.1.
+      BEEPER_API_URL: http://host.docker.internal:23373
+    extra_hosts:
+      # host.docker.internal is automatic on Docker Desktop; this line is
+      # what makes it resolve on Linux Docker engine too.
+      - "host.docker.internal:host-gateway"

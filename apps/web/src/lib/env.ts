@@ -29,3 +29,7 @@ export function getAppUrl() {
 export function hasTwilioEnv() {
   return Boolean(process.env.TWILIO_AUTH_TOKEN);
 }
+
+export function hasBeeperEnv() {
+  return Boolean(process.env.BEEPER_ACCESS_TOKEN);
+}

@@ -3,12 +3,12 @@ import { GoogleGenAI } from "@google/genai";
 import {
   buildInitialAskCopy,
   buildNegativeFollowUpCopy,
+  buildNeutralAckCopy,
   buildPositiveFollowUpCopy,
+  buildQuestionFallbackCopy,
   buildReminderFollowUpCopy,
-  buildUnknownReplyCopy,
   parseFeedbackReply,
   type ParsedFeedbackReply,
-  type SentimentBucket,
 } from "./review";
 
 type ReviewMessageContext = {
@@ -16,7 +16,9 @@ type ReviewMessageContext = {
 };
 
 type FollowUpContext = {
-  bucket: SentimentBucket;
+  isFeedback: boolean;
+  sentiment: "positive" | "negative" | null;
+  isQuestion: boolean;
   trackedReviewUrl: string | null;
   customerReply: string;
   organizationName: string;
@@ -35,12 +37,13 @@ type GeminiConfig = {
 const REPLY_ANALYSIS_SCHEMA = {
   type: "object",
   properties: {
+    isFeedback: { type: "boolean" },
+    sentiment: { type: ["string", "null"], enum: ["positive", "negative", null] },
+    isQuestion: { type: "boolean" },
     score: { type: ["integer", "null"], minimum: 1, maximum: 5 },
     freeText: { type: ["string", "null"] },
-    bucket: { type: "string", enum: ["positive", "negative", "unknown"] },
-    reviewPromptEligible: { type: "boolean" },
   },
-  required: ["score", "freeText", "bucket", "reviewPromptEligible"],
+  required: ["isFeedback", "sentiment", "isQuestion", "score", "freeText"],
 };
 
 function getGeminiConfig(): GeminiConfig {
@@ -118,27 +121,28 @@ export function parseGeneratedReplyAnalysis(input: string): ParsedFeedbackReply 
 
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>;
+    const isFeedback = typeof parsed.isFeedback === "boolean" ? parsed.isFeedback : false;
+    const sentiment = parsed.sentiment === "positive" || parsed.sentiment === "negative" ? parsed.sentiment : null;
+    const isQuestion = typeof parsed.isQuestion === "boolean" ? parsed.isQuestion : false;
     const score =
       typeof parsed.score === "number" && Number.isInteger(parsed.score) && parsed.score >= 1 && parsed.score <= 5
         ? parsed.score
         : null;
     const freeText = typeof parsed.freeText === "string" ? parsed.freeText.trim() || null : null;
-    const bucket =
-      parsed.bucket === "positive" || parsed.bucket === "negative" || parsed.bucket === "unknown"
-        ? parsed.bucket
-        : null;
-    const reviewPromptEligible =
-      typeof parsed.reviewPromptEligible === "boolean" ? parsed.reviewPromptEligible : bucket === "positive";
 
-    if (!bucket) {
+    if (isFeedback && !sentiment) {
       return null;
     }
+
+    const bucket = isFeedback ? sentiment! : "unknown";
 
     return {
       score,
       freeText,
       bucket,
-      reviewPromptEligible,
+      isFeedback,
+      isQuestion,
+      reviewPromptEligible: bucket === "positive",
     };
   } catch {
     return null;
@@ -183,7 +187,12 @@ async function generateStructuredReplyAnalysis(body: string) {
   const response = await client.interactions.create({
     model: getGeminiConfig().model,
     system_instruction:
-      "Classify a customer SMS reply about a service experience. Return valid JSON that matches the provided schema.",
+      "Classify a customer SMS reply to a request for feedback about their recent experience. " +
+      "isFeedback: true if the reply expresses any opinion or rating about the experience, in any " +
+      "form -- not just a number. sentiment: \"positive\" or \"negative\" if isFeedback is true, " +
+      "otherwise null. isQuestion: true if the customer is asking something that needs answering. " +
+      "score: an explicit 1-5 rating only if they gave one, otherwise null. freeText: any " +
+      "descriptive text from their reply. Return valid JSON that matches the provided schema.",
     input: `Customer reply: ${body}`,
     response_format: REPLY_ANALYSIS_SCHEMA,
     response_mime_type: "application/json",
@@ -198,7 +207,9 @@ export async function generateInitialAskMessage(context: ReviewMessageContext) {
   try {
     const output = await generateText({
       systemInstruction:
-        "Write a single SMS asking a recent customer for a 1-5 rating. Keep it under 160 characters, conversational, and do not use emojis.",
+        "Write a single SMS asking a recent customer how their experience was, in an open " +
+        "conversational way -- do not ask them to reply with a number. Keep it under 160 " +
+        "characters, friendly, and do not use emojis.",
       input: `Business name: ${context.organizationName}\nFallback copy: ${fallback}`,
     });
 
@@ -220,20 +231,30 @@ export async function analyzeReplyMessage(body: string) {
 
 export async function generateFollowUpMessage(context: FollowUpContext) {
   const fallback =
-    context.bucket === "positive" && context.trackedReviewUrl
+    context.isFeedback && context.sentiment === "positive" && context.trackedReviewUrl
       ? buildPositiveFollowUpCopy(context.trackedReviewUrl)
-      : context.bucket === "negative"
+      : context.isFeedback && context.sentiment === "negative"
         ? buildNegativeFollowUpCopy()
-        : buildUnknownReplyCopy();
+        : context.isQuestion
+          ? buildQuestionFallbackCopy()
+          : buildNeutralAckCopy();
 
   try {
     const output = await generateText({
       systemInstruction:
-        "Write a single SMS follow-up to a customer after they replied to a rating request. Keep it under 240 characters, friendly, and do not use emojis.",
+        "Write a single SMS reply in an ongoing conversation with a customer about their recent " +
+        "experience. If they asked a question, answer it helpfully and concisely using the business " +
+        "name (you only know the business name, so keep answers general and offer to have someone " +
+        "follow up if you're not sure). If their message is positive feedback, thank them and ask if " +
+        "they'd leave a review at the tracked link. If it's negative feedback, apologize and let them " +
+        "know the team will follow up -- do not include the review link. Otherwise just acknowledge " +
+        "warmly. Keep it under 240 characters, friendly, and do not use emojis.",
       input: [
         `Business name: ${context.organizationName}`,
         `Customer reply: ${context.customerReply}`,
-        `Sentiment bucket: ${context.bucket}`,
+        `Is feedback: ${context.isFeedback}`,
+        `Sentiment: ${context.sentiment ?? "none"}`,
+        `Is a question: ${context.isQuestion}`,
         `Tracked review URL: ${context.trackedReviewUrl ?? "none"}`,
         `Fallback copy: ${fallback}`,
       ].join("\n"),

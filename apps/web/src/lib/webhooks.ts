@@ -2,9 +2,9 @@ import crypto from "node:crypto";
 
 import { analyzeReplyMessage, normalizeSquarePayment } from "@automated-reviews/core";
 
-import { getAppUrl, hasTwilioEnv } from "./env";
+import { getAppUrl, hasBeeperEnv, hasTwilioEnv } from "./env";
 import { createSupabaseAdminClient } from "./supabase";
-import { getFollowUpMessageBody, getInitialMessageBody, sendTwilioMessage } from "./messaging";
+import { getFollowUpMessageBody, getInitialMessageBody, sendOutboundReviewMessage } from "./messaging";
 import { scheduleInitialReviewRequest, scheduleReviewReminder } from "./temporal";
 
 function buildTrackedReviewUrl(token: string) {
@@ -46,7 +46,7 @@ export async function sendInitialReviewRequestNow(reviewRequestId: string) {
     review_request_id: reviewRequest.id,
     payment_event_id: reviewRequest.payment_event_id,
     customer_id: reviewRequest.customer_id,
-    provider: hasTwilioEnv() ? "twilio" : "demo",
+    provider: hasTwilioEnv() ? "twilio" : hasBeeperEnv() ? "beeper" : "demo",
     direction: "outbound",
     message_type: "sms_send_attempted",
     status: "attempted",
@@ -54,16 +54,15 @@ export async function sendInitialReviewRequestNow(reviewRequestId: string) {
     occurred_at: new Date().toISOString(),
   });
 
-  if (setting.twilio_account_sid && setting.twilio_phone_number && hasTwilioEnv()) {
-    const message = await sendTwilioMessage({
-      accountSid: setting.twilio_account_sid,
-      authToken: process.env.TWILIO_AUTH_TOKEN!,
-      from: setting.twilio_phone_number,
-      to: customer.phone,
-      body: initialBody,
-      reviewRequestId: reviewRequest.id,
-    });
+  const result = await sendOutboundReviewMessage({
+    to: customer.phone,
+    body: initialBody,
+    reviewRequestId: reviewRequest.id,
+    twilioAccountSid: setting.twilio_account_sid,
+    twilioPhoneNumber: setting.twilio_phone_number,
+  });
 
+  if (result) {
     await supabase
       .from("review_requests")
       .update({
@@ -77,16 +76,16 @@ export async function sendInitialReviewRequestNow(reviewRequestId: string) {
       review_request_id: reviewRequest.id,
       payment_event_id: reviewRequest.payment_event_id,
       customer_id: reviewRequest.customer_id,
-      provider: "twilio",
-      provider_message_sid: message.sid,
+      provider: result.provider,
+      provider_message_sid: result.sid,
       direction: "outbound",
       message_type: "sms_sent",
-      status: message.status ?? "sent",
+      status: result.status,
       message_body: initialBody,
       occurred_at: new Date().toISOString(),
     });
 
-    return { mode: "twilio", customerPhone: customer.phone };
+    return { mode: result.provider, customerPhone: customer.phone };
   }
 
   await supabase
@@ -240,7 +239,9 @@ export async function processSquareWebhook(
     occurred_at: new Date().toISOString(),
   });
 
-  if (!setting.auto_send_enabled || !setting.twilio_phone_number || !setting.twilio_account_sid || !hasTwilioEnv()) {
+  const canSendViaTwilio = Boolean(setting.twilio_phone_number && setting.twilio_account_sid && hasTwilioEnv());
+
+  if (!setting.auto_send_enabled || (!canSendViaTwilio && !hasBeeperEnv())) {
     return { created: true, reviewRequestId: reviewRequest.id, sent: false };
   }
 
@@ -261,7 +262,7 @@ export async function processSquareWebhook(
       review_request_id: reviewRequest.id,
       payment_event_id: paymentEvent.id,
       customer_id: customerId,
-      provider: "twilio",
+      provider: canSendViaTwilio ? "twilio" : "beeper",
       direction: "outbound",
       message_type: "sms_send_attempted",
       status: "attempted",
@@ -269,36 +270,37 @@ export async function processSquareWebhook(
       occurred_at: new Date().toISOString(),
     });
 
-    const message = await sendTwilioMessage({
-      accountSid: setting.twilio_account_sid,
-      authToken: process.env.TWILIO_AUTH_TOKEN!,
-      from: setting.twilio_phone_number,
+    const result = await sendOutboundReviewMessage({
       to: normalized.phone,
       body: initialBody,
       reviewRequestId: reviewRequest.id,
+      twilioAccountSid: setting.twilio_account_sid,
+      twilioPhoneNumber: setting.twilio_phone_number,
     });
 
-    await supabase
-      .from("review_requests")
-      .update({
-        status: "sent",
-        sent_at: new Date().toISOString(),
-      })
-      .eq("id", reviewRequest.id);
+    if (result) {
+      await supabase
+        .from("review_requests")
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+        })
+        .eq("id", reviewRequest.id);
 
-    await supabase.from("message_events").insert({
-      organization_id: setting.organization_id,
-      review_request_id: reviewRequest.id,
-      payment_event_id: paymentEvent.id,
-      customer_id: customerId,
-      provider: "twilio",
-      provider_message_sid: message.sid,
-      direction: "outbound",
-      message_type: "sms_sent",
-      status: message.status ?? "sent",
-      message_body: initialBody,
-      occurred_at: new Date().toISOString(),
-    });
+      await supabase.from("message_events").insert({
+        organization_id: setting.organization_id,
+        review_request_id: reviewRequest.id,
+        payment_event_id: paymentEvent.id,
+        customer_id: customerId,
+        provider: result.provider,
+        provider_message_sid: result.sid,
+        direction: "outbound",
+        message_type: "sms_sent",
+        status: result.status,
+        message_body: initialBody,
+        occurred_at: new Date().toISOString(),
+      });
+    }
   }
 
   return { created: true, reviewRequestId: reviewRequest.id, scheduled: true };
@@ -408,7 +410,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
       score: parsed.score,
       free_text: parsed.freeText,
       sentiment_bucket: parsed.bucket,
-      owner_follow_up_required: parsed.bucket === "negative",
+      owner_follow_up_required: parsed.bucket === "negative" || parsed.isQuestion,
       review_prompt_sent: false,
     })
     .select("id")
@@ -422,7 +424,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
     .from("review_requests")
     .update({
       replied_at: new Date().toISOString(),
-      status: parsed.bucket === "unknown" ? "awaiting_follow_up" : "responded",
+      status: parsed.isFeedback ? "responded" : "awaiting_follow_up",
     })
     .eq("id", reviewRequest.id);
 
@@ -431,28 +433,29 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
       ? buildTrackedReviewUrl(reviewRequest.tracking_token)
       : null;
   const followUpBody = await getFollowUpMessageBody({
-    bucket: parsed.bucket,
+    isFeedback: parsed.isFeedback,
+    sentiment: parsed.bucket === "unknown" ? null : parsed.bucket,
+    isQuestion: parsed.isQuestion,
     trackedReviewUrl,
     customerReply: body,
     organizationName: organizationSetting.organization.name,
   });
 
-  if (organizationSetting.twilio_account_sid && organizationSetting.twilio_phone_number && hasTwilioEnv()) {
-    const followUp = await sendTwilioMessage({
-      accountSid: organizationSetting.twilio_account_sid,
-      authToken: process.env.TWILIO_AUTH_TOKEN!,
-      from: organizationSetting.twilio_phone_number,
-      to: from,
-      body: followUpBody,
-      reviewRequestId: reviewRequest.id,
-    });
+  const followUp = await sendOutboundReviewMessage({
+    to: from,
+    body: followUpBody,
+    reviewRequestId: reviewRequest.id,
+    twilioAccountSid: organizationSetting.twilio_account_sid,
+    twilioPhoneNumber: organizationSetting.twilio_phone_number,
+  });
 
+  if (followUp) {
     await supabase.from("message_events").insert({
       organization_id: organizationSetting.organization_id,
       review_request_id: reviewRequest.id,
       payment_event_id: reviewRequest.payment_event_id,
       customer_id: customer.id,
-      provider: "twilio",
+      provider: followUp.provider,
       provider_message_sid: followUp.sid,
       direction: "outbound",
       message_type:
@@ -460,8 +463,10 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
           ? "review_prompt_sent"
           : parsed.bucket === "negative"
             ? "owner_follow_up_flagged"
-            : "feedback_unknown",
-      status: followUp.status ?? "sent",
+            : parsed.isQuestion
+              ? "question_answered"
+              : "feedback_unknown",
+      status: followUp.status,
       message_body: followUpBody,
       occurred_at: new Date().toISOString(),
     });
