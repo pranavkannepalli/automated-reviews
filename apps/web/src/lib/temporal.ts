@@ -32,9 +32,11 @@ export async function scheduleInitialReviewRequest(input: ScheduleInitialReviewR
     return false;
   }
 
+  const workflowId = input.workflowId ?? `review-request-${input.reviewRequestId}`;
+
   await client.workflow.start("scheduleInitialReviewRequestWorkflow", {
     taskQueue: REVIEWS_TASK_QUEUE,
-    workflowId: `review-request-${input.reviewRequestId}`,
+    workflowId,
     args: [input],
   });
 
@@ -47,9 +49,11 @@ export async function scheduleReviewReminder(input: ScheduleReviewReminderInput)
     return false;
   }
 
+  const workflowId = input.workflowId ?? `review-reminder-${input.reviewRequestId}`;
+
   await client.workflow.start("scheduleReviewReminderWorkflow", {
     taskQueue: REVIEWS_TASK_QUEUE,
-    workflowId: `review-reminder-${input.reviewRequestId}`,
+    workflowId,
     args: [input],
   });
 
