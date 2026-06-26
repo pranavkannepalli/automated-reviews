@@ -1,0 +1,10 @@
+version: "3"
+agent:
+  authtoken: 38KlQEZDKdPbpmycVw6AASbJ7u2_6ZK9QrjQ2bcBMAeSJG2yz
+tunnels:
+  app:
+    proto: http
+    addr: 3000
+  supabase:
+    proto: http
+    addr: 55321

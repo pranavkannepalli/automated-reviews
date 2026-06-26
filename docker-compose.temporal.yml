@@ -1,0 +1,20 @@
+services:
+  temporal:
+    image: temporalio/temporal:latest
+    container_name: automated_reviews_temporal
+    command:
+      - server
+      - start-dev
+      - --ip
+      - 0.0.0.0
+      - --ui-ip
+      - 0.0.0.0
+      - --port
+      - "7233"
+      - --ui-port
+      - "8233"
+      - --db-filename
+      - /tmp/temporal.db
+    ports:
+      - "7233:7233"
+      - "8233:8233"
