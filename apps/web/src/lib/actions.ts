@@ -259,7 +259,7 @@ export async function seedMockPaymentEventAction(
     },
   };
 
-  const result = await processSquareWebhook(payload);
+  const result = await processSquareWebhook(payload, { forceImmediateSend: true });
   const reviewRequestId = "reviewRequestId" in result && typeof result.reviewRequestId === "string"
     ? result.reviewRequestId
     : null;
@@ -278,7 +278,6 @@ export async function seedMockPaymentEventAction(
     };
   }
 
-  const sendResult = await sendInitialReviewRequestNow(reviewRequestId);
   revalidatePath("/app");
 
   return {
@@ -290,7 +289,6 @@ export async function seedMockPaymentEventAction(
       `location_id: ${locationId}`,
       `customer: ${scenario.firstName} ${scenario.lastName} (${phoneNumber})`,
       `review_request: ${reviewRequestId}`,
-      `send_mode: ${sendResult.mode}`,
       `result: ${JSON.stringify(result)}`,
     ]),
   };

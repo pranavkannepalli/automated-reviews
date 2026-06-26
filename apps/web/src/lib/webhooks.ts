@@ -113,7 +113,12 @@ export async function sendInitialReviewRequestNow(reviewRequestId: string) {
   return { mode: "simulated", customerPhone: customer.phone };
 }
 
-export async function processSquareWebhook(payload: unknown) {
+export async function processSquareWebhook(
+  payload: unknown,
+  options?: {
+    forceImmediateSend?: boolean;
+  },
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase: any = createSupabaseAdminClient();
   const normalized = normalizeSquarePayment(payload);
@@ -239,10 +244,14 @@ export async function processSquareWebhook(payload: unknown) {
     return { created: true, reviewRequestId: reviewRequest.id, sent: false };
   }
 
-  const scheduled = await scheduleInitialReviewRequest({
-    reviewRequestId: reviewRequest.id,
-    delayMinutes: Math.max(Number(setting.message_delay_minutes ?? 120), 0),
-  });
+  let scheduled = false;
+
+  if (!options?.forceImmediateSend) {
+    scheduled = await scheduleInitialReviewRequest({
+      reviewRequestId: reviewRequest.id,
+      delayMinutes: Math.max(Number(setting.message_delay_minutes ?? 120), 0),
+    });
+  }
 
   if (!scheduled) {
     const initialBody = await getInitialMessageBody(setting.organization.name);
