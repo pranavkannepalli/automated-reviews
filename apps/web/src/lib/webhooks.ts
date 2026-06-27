@@ -116,6 +116,7 @@ export async function processSquareWebhook(
   payload: unknown,
   options?: {
     forceImmediateSend?: boolean;
+    delayMinutesOverride?: number;
   },
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -250,7 +251,10 @@ export async function processSquareWebhook(
   if (!options?.forceImmediateSend) {
     scheduled = await scheduleInitialReviewRequest({
       reviewRequestId: reviewRequest.id,
-      delayMinutes: Math.max(Number(setting.message_delay_minutes ?? 120), 0),
+      delayMinutes: Math.max(
+        Number(options?.delayMinutesOverride ?? setting.message_delay_minutes ?? 120),
+        0,
+      ),
     });
   }
 

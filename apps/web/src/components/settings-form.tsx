@@ -72,7 +72,7 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
 
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
         <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-semibold text-slate-950">Public testimonial widget</h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">
               Publish recent positive customer feedback on the website with a simple iframe. The widget pulls from positive SMS responses already captured inside this organization.
@@ -83,7 +83,7 @@ export function SettingsForm({ membership }: { membership: OrganizationMembershi
               <InfoRow label="Default accent color" value={organization.primary_color} />
             </div>
           </div>
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             <CodeBlock label="Default iframe embed" value={defaultEmbedCode} />
             <CodeBlock label="Styled iframe embed example" value={themedEmbedCode} />
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
@@ -125,18 +125,18 @@ function Field({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
+    <div className="min-w-0 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
       <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className="mt-2 break-all text-sm font-medium text-slate-950">{value}</p>
+      <p className="mt-2 overflow-hidden text-sm font-medium text-slate-950 [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
 }
 
 function CodeBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-950 p-4">
+    <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef4f8_100%)] p-4">
       <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-cyan-100">
+      <pre className="mt-3 max-w-full overflow-x-auto whitespace-pre-wrap text-xs leading-6 text-slate-700 [overflow-wrap:anywhere]">
         <code>{value}</code>
       </pre>
     </div>

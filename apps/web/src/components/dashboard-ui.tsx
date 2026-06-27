@@ -132,20 +132,20 @@ function SetupCard({
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="grid gap-3">
           {checklist.map((item) => (
-            <div key={item.label} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4">
+            <div key={item.label} className="flex min-w-0 items-start gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4">
               <div className={cn("mt-0.5", item.complete ? "text-emerald-600" : "text-slate-300")}>
                 {item.complete ? <CheckCircle2 className="h-5 w-5" /> : <Clock3 className="h-5 w-5" />}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-950">{item.label}</p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">{item.detail}</p>
+                <p className="mt-1 text-sm leading-6 text-slate-500 [overflow-wrap:anywhere]">{item.detail}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">This week at a glance</p>
+        <div className="rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,#f8fbff_0%,#edf7ff_100%)] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">This week at a glance</p>
           <div className="mt-5 space-y-4">
             <StatusLine label="Customers contacted" value={formatMetric(totals.messagesSent)} />
             <StatusLine label="Replies received" value={formatMetric(totals.repliesReceived)} />
@@ -168,9 +168,9 @@ function StatusLine({
   tone?: "neutral" | "warning";
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4 last:border-b-0 last:pb-0">
-      <span className="text-sm text-slate-300">{label}</span>
-      <span className={cn("text-sm font-semibold", tone === "warning" ? "text-amber-300" : "text-white")}>{value}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+      <span className="text-sm text-slate-600">{label}</span>
+      <span className={cn("text-sm font-semibold", tone === "warning" ? "text-amber-600" : "text-slate-950")}>{value}</span>
     </div>
   );
 }
@@ -215,18 +215,18 @@ function ActivityFeed({ items, emptyCopy }: { items: ActivityItem[]; emptyCopy: 
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
+        <div key={item.id} className="min-w-0 rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-950">
                 {item.customer_name ?? item.customer_phone ?? "Customer record"}
               </p>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-slate-500 [overflow-wrap:anywhere]">
                 {item.message_body ?? item.event_type.replaceAll("_", " ")}
               </p>
             </div>
-            <div className="text-right text-xs text-slate-400">
-              <p className="font-medium capitalize text-slate-600">{item.status ?? item.sentiment_bucket ?? item.event_type}</p>
+            <div className="min-w-0 shrink-0 text-right text-xs text-slate-400">
+              <p className="font-medium capitalize text-slate-600 [overflow-wrap:anywhere]">{item.status ?? item.sentiment_bucket ?? item.event_type}</p>
               <p className="mt-1">{relativeTime(item.occurred_at)}</p>
             </div>
           </div>
@@ -289,10 +289,10 @@ function SummaryRow({
   tone?: "neutral" | "positive" | "negative";
 }) {
   return (
-    <div className="flex items-center justify-between rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
-      <div>
+    <div className="flex min-w-0 items-center justify-between gap-4 rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
+      <div className="min-w-0">
         <p className="text-sm text-slate-500">{label}</p>
-        <p className="mt-1 text-sm font-medium text-slate-950">{value}</p>
+        <p className="mt-1 text-sm font-medium text-slate-950 [overflow-wrap:anywhere]">{value}</p>
       </div>
       {tone === "positive" ? (
         <BadgeCheck className="h-4 w-4 text-emerald-600" />
