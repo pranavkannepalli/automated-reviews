@@ -64,7 +64,8 @@ async function seed() {
     .insert({
       organization_id: organization.id,
       phone,
-      name: "Workflow Test Customer",
+      first_name: "Workflow",
+      last_name: "Test Customer",
       is_test: true,
       environment: "local_test",
     })
@@ -77,7 +78,10 @@ async function seed() {
     .insert({
       organization_id: organization.id,
       customer_id: customer.id,
-      amount_cents: 1000,
+      source: "manual_test",
+      source_payment_id: `test-payment-${suffix}`,
+      amount: 1000,
+      phone,
       is_test: true,
       environment: "local_test",
     })

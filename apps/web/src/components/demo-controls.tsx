@@ -30,18 +30,18 @@ export function DemoControls({ organizationId }: { organizationId: string }) {
 
       <div className="mt-5 rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_36%),linear-gradient(180deg,#f8fbff_0%,#f5f7fb_100%)] p-4">
         <div className="rounded-[22px] border border-dashed border-slate-300 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-500">
-          Use this only if you need to simulate a real customer during a walkthrough. It creates a mock payment for the phone number you enter and immediately sends the first message.
+          Use this only if you need to simulate a real customer during a walkthrough. It creates a mock payment for the phone number you enter and queues the first message through Temporal.
         </div>
 
         <div className="mt-4">
           <DemoCard
             title="Send a sample customer through the flow"
-            description="Enter a phone number to create a realistic payment event, open a review request, and trigger the first outbound message in one step."
+            description="Enter a phone number to create a realistic payment event, open a review request, and hand the first outbound message to the Temporal worker."
             icon={<Beaker className="h-5 w-5" />}
             pending={seedPending}
             action={seedAction}
             state={seedState}
-            buttonLabel="Create event and send message"
+            buttonLabel="Create event and queue message"
             organizationId={organizationId}
           />
         </div>

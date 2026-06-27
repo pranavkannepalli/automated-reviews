@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getDemoProcessSquareWebhookOptions } from "@automated-reviews/core";
+
 import { createSupabaseServerClient } from "./supabase";
 import { getAppUrl, hasSupabaseEnv } from "./env";
 import { requireSession, setActiveOrganizationCookie } from "./auth";
@@ -259,7 +261,7 @@ export async function seedMockPaymentEventAction(
     },
   };
 
-  const result = await processSquareWebhook(payload, { forceImmediateSend: true });
+  const result = await processSquareWebhook(payload, getDemoProcessSquareWebhookOptions());
   const reviewRequestId = "reviewRequestId" in result && typeof result.reviewRequestId === "string"
     ? result.reviewRequestId
     : null;
@@ -281,7 +283,7 @@ export async function seedMockPaymentEventAction(
   revalidatePath("/app");
 
   return {
-    success: "Sample payment created and the first message was processed.",
+    success: "Sample payment created and the first message was queued.",
     details: formatDemoDetails([
       `store: ${scenario.storeName}`,
       `payment_event: ${payload.event_id}`,

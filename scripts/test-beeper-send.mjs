@@ -29,15 +29,55 @@ const headers = {
   Authorization: `Bearer ${token}`,
 };
 
+async function resolveAccountID() {
+  const response = await fetch(`${baseUrl}/v1/accounts`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const accounts = await response.json();
+  const preferred = accountId
+    ? accounts.find((account) => account.accountID === accountId && account.status === "connected")
+    : null;
+
+  if (preferred) {
+    return preferred.accountID;
+  }
+
+  const whatsapp = accounts.find((account) => {
+    const network = account.network?.toLowerCase();
+    const bridgeId = account.bridge?.id?.toLowerCase();
+    const bridgeType = account.bridge?.type?.toLowerCase();
+    const candidate = account.accountID?.toLowerCase();
+
+    return (
+      account.status === "connected" &&
+      (network === "whatsapp" ||
+        bridgeId === "whatsapp" ||
+        bridgeType === "whatsapp" ||
+        candidate === "whatsapp")
+    );
+  });
+
+  if (!whatsapp) {
+    console.error("No connected Beeper WhatsApp account found. Set BEEPER_ACCOUNT_ID.");
+    process.exit(1);
+  }
+
+  return whatsapp.accountID;
+}
+
 async function main() {
+  const resolvedAccountID = await resolveAccountID();
   console.log(`Resolving chat for ${to} via ${baseUrl} ...`);
-  const chatRes = await fetch(`${baseUrl}/v1/chats`, {
+  const chatRes = await fetch(`${baseUrl}/v1/chats/start`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      mode: "start",
-      phoneNumber: to,
-      ...(accountId ? { accountID: accountId } : {}),
+      accountID: resolvedAccountID,
+      user: {
+        phoneNumber: to,
+      },
     }),
   });
   const chatText = await chatRes.text();

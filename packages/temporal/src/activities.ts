@@ -1,7 +1,10 @@
 import {
   analyzeReplyMessage,
+  buildBeeperStartChatInput,
   generateFollowUpMessage,
   generateInitialAskMessage,
+  getBeeperPendingMessageId,
+  pickBeeperAccountID,
   generateReminderMessage,
 } from "@automated-reviews/core";
 import { createClient } from "@supabase/supabase-js";
@@ -34,18 +37,45 @@ function beeperHeaders() {
   };
 }
 
+async function listBeeperAccounts() {
+  const response = await fetch(`${beeperApiUrl}/v1/accounts`, {
+    headers: beeperHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Beeper account lookup failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<
+    Array<{
+      accountID: string;
+      network?: string;
+      status?: string;
+      bridge?: { id?: string; type?: string };
+    }>
+  >;
+}
+
+async function resolveBeeperAccountID() {
+  const accountID = pickBeeperAccountID(await listBeeperAccounts(), beeperAccountId);
+
+  if (!accountID) {
+    throw new Error(
+      "No connected Beeper WhatsApp account found. Set BEEPER_ACCOUNT_ID to a connected account.",
+    );
+  }
+
+  return accountID;
+}
+
 // "start" is idempotent on Beeper's side -- it returns the existing direct
 // chat with this phone number if there is one, rather than creating a
 // duplicate, so it's safe to call on every send and every poll.
 async function startBeeperChat(phoneNumber: string) {
-  const response = await fetch(`${beeperApiUrl}/v1/chats`, {
+  const response = await fetch(`${beeperApiUrl}/v1/chats/start`, {
     method: "POST",
     headers: beeperHeaders(),
-    body: JSON.stringify({
-      mode: "start",
-      phoneNumber,
-      ...(beeperAccountId ? { accountID: beeperAccountId } : {}),
-    }),
+    body: JSON.stringify(buildBeeperStartChatInput(phoneNumber, await resolveBeeperAccountID())),
   });
 
   if (!response.ok) {
@@ -71,7 +101,10 @@ async function sendBeeperMessage(to: string, body: string) {
   }
 
   const message = await messageResponse.json();
-  return { sid: (message.messageID as string | undefined) ?? null, status: "sent" };
+  return {
+    sid: getBeeperPendingMessageId(message as { pendingMessageID?: string; messageID?: string }),
+    status: "sent",
+  };
 }
 
 type BeeperMessage = {
