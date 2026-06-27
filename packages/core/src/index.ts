@@ -11,6 +11,10 @@ export {
 } from "./beeper";
 export { getDemoProcessSquareWebhookOptions } from "./demo-flow";
 export {
+  buildInitialReviewTriggerRequest,
+  buildReminderTriggerRequest,
+} from "./internal-trigger";
+export {
   analyzeReplyMessage,
   coerceGeneratedMessage,
   generateFollowUpMessage,

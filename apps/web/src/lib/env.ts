@@ -26,6 +26,14 @@ export function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
+export function getInternalAppUrl() {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return `http://127.0.0.1:${process.env.PORT ?? "3000"}`;
+}
+
 export function hasTwilioEnv() {
   return Boolean(process.env.TWILIO_AUTH_TOKEN);
 }
