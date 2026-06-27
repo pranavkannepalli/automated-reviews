@@ -1,17 +1,40 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
 import { Beaker, ChevronDown } from "lucide-react";
 
-import {
-  seedMockPaymentEventAction,
-  type DemoActionState,
-} from "@/lib/actions";
+import type { DemoActionState } from "@/lib/actions";
 
 const INITIAL_STATE: DemoActionState = {};
 
 export function DemoControls({ organizationId }: { organizationId: string }) {
-  const [seedState, seedAction, seedPending] = useActionState(seedMockPaymentEventAction, INITIAL_STATE);
+  const [seedState, setSeedState] = useState(INITIAL_STATE);
+  const [seedPending, setSeedPending] = useState(false);
+
+  async function seedAction(formData: FormData) {
+    setSeedPending(true);
+    setSeedState(INITIAL_STATE);
+
+    try {
+      const response = await fetch("/api/demo/send-sample", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: String(formData.get("organizationId") ?? ""),
+          phoneNumber: String(formData.get("phoneNumber") ?? "").trim(),
+        }),
+      });
+
+      const result = (await response.json().catch(() => ({ error: "Failed to parse response." }))) as DemoActionState;
+      setSeedState(result);
+    } catch {
+      setSeedState({ error: "Failed to create the demo event." });
+    } finally {
+      setSeedPending(false);
+    }
+  }
 
   return (
     <details className="group rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fafc_100%)] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.05)]">
@@ -65,12 +88,17 @@ function DemoCard({
   icon: React.ReactNode;
   buttonLabel: string;
   pending: boolean;
-  action: (payload: FormData) => void;
+  action: (payload: FormData) => Promise<void>;
   state: DemoActionState;
   organizationId: string;
 }) {
   return (
-    <form action={action} className="rounded-[24px] border border-slate-200 bg-white p-5">
+    <form
+      action={async (formData) => {
+        await action(formData);
+      }}
+      className="rounded-[24px] border border-slate-200 bg-white p-5"
+    >
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">{icon}</div>
       <h3 className="mt-5 text-base font-semibold text-slate-950">{title}</h3>
