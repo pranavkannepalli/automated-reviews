@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { scheduleInitialReviewRequest, scheduleReviewReminder } from "@/lib/temporal";
+import { triggerInitialReviewRequest, triggerReviewReminder } from "@/lib/internal-trigger";
 
 const bodySchema = z.object({
   reviewRequestId: z.string().uuid(),
@@ -37,33 +37,23 @@ export async function POST(request: Request) {
   }
 
   const { reviewRequestId, mode, directSend, delayMinutes, delayHours } = parsed.data;
-  const workflowId = `${mode}-${reviewRequestId}-${Date.now()}`;
 
-  const scheduled =
-    mode === "initial"
-      ? await scheduleInitialReviewRequest({
-          reviewRequestId,
-          delayMinutes: directSend ? 0 : (delayMinutes ?? 0),
-          workflowId,
-        })
-      : await scheduleReviewReminder({
-          reviewRequestId,
-          delayHours: directSend ? 0 : (delayHours ?? 48),
-          workflowId,
-        });
+  try {
+    const result =
+      mode === "initial"
+        ? await triggerInitialReviewRequest({
+            reviewRequestId,
+            delayMinutes: directSend ? 0 : (delayMinutes ?? 0),
+          })
+        : await triggerReviewReminder({
+            reviewRequestId,
+            delayHours: directSend ? 0 : (delayHours ?? 48),
+          });
 
-  if (!scheduled) {
-    return NextResponse.json(
-      { error: "Temporal client is not configured in this environment." },
-      { status: 503 },
-    );
+    return NextResponse.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to queue review workflow.";
+    const status = message.includes("Temporal client is not configured") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
-
-  return NextResponse.json({
-    queued: true,
-    mode,
-    reviewRequestId,
-    directSend,
-    workflowId,
-  });
 }

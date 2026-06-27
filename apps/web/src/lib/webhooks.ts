@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { analyzeReplyMessage, normalizeSquarePayment } from "@automated-reviews/core";
 
 import { getAppUrl, hasBeeperEnv, hasTwilioEnv } from "./env";
-import { triggerInitialReviewRequestViaApi, triggerReviewReminderViaApi } from "./internal-trigger";
+import { triggerInitialReviewRequest, triggerReviewReminder } from "./internal-trigger";
 import { createSupabaseAdminClient } from "./supabase";
 import { getFollowUpMessageBody, getInitialMessageBody, sendOutboundReviewMessage } from "./messaging";
 
@@ -249,7 +249,7 @@ export async function processSquareWebhook(
   let scheduled = false;
 
   if (!options?.forceImmediateSend) {
-    await triggerInitialReviewRequestViaApi({
+    await triggerInitialReviewRequest({
       reviewRequestId: reviewRequest.id,
       delayMinutes: Math.max(
         Number(options?.delayMinutesOverride ?? setting.message_delay_minutes ?? 120),
@@ -498,7 +498,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
       })
       .eq("id", reviewRequest.id);
 
-    await triggerReviewReminderViaApi({
+    await triggerReviewReminder({
       reviewRequestId: reviewRequest.id,
       delayHours: 48,
     });

@@ -72,7 +72,17 @@ export async function seedMockPaymentEvent({
         organization_id: organizationId,
         square_location_id: locationId,
         message_delay_minutes: settings?.message_delay_minutes ?? 120,
-        auto_send_enabled: settings?.auto_send_enabled ?? false,
+        auto_send_enabled: true,
+      },
+      { onConflict: "organization_id" },
+    );
+  } else if (!settings?.auto_send_enabled) {
+    await supabase.from("organization_settings").upsert(
+      {
+        organization_id: organizationId,
+        square_location_id: locationId,
+        message_delay_minutes: settings?.message_delay_minutes ?? 120,
+        auto_send_enabled: true,
       },
       { onConflict: "organization_id" },
     );
