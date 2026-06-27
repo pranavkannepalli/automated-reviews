@@ -39,7 +39,7 @@ export async function seedMockPaymentEvent({
   organizationId: string;
   phoneNumber: string;
 }): Promise<DemoActionState> {
-  const session = await requireSession();
+  const session = await requireSession({ onUnauthorized: "error" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase: any = await createSupabaseServerClient();
   const scenario = MOCK_STORE_SCENARIOS[Math.floor(Math.random() * MOCK_STORE_SCENARIOS.length)];

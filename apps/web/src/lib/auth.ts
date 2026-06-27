@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import type { User } from "@supabase/supabase-js";
 
 import { hasSupabaseEnv } from "./env";
 import { createSupabaseServerClient } from "./supabase";
@@ -43,6 +44,13 @@ export type OrganizationMembership = MembershipRow & {
   settings: OrganizationSettingsRow | null;
 };
 
+export class AuthenticationRequiredError extends Error {
+  constructor() {
+    super("Authentication required.");
+    this.name = "AuthenticationRequiredError";
+  }
+}
+
 export async function getSession() {
   if (!hasSupabaseEnv()) {
     return null;
@@ -50,15 +58,24 @@ export async function getSession() {
 
   const supabase = await createSupabaseServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  return session;
+  if (error || !user) {
+    return null;
+  }
+
+  return { user } as { user: User };
 }
 
-export async function requireSession() {
+export async function requireSession(options?: { onUnauthorized?: "redirect" | "error" }) {
   const session = await getSession();
   if (!session) {
+    if (options?.onUnauthorized === "error") {
+      throw new AuthenticationRequiredError();
+    }
+
     redirect("/sign-in");
   }
 

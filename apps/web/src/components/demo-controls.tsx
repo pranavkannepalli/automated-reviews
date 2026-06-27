@@ -26,9 +26,25 @@ export function DemoControls({ organizationId }: { organizationId: string }) {
           phoneNumber: String(formData.get("phoneNumber") ?? "").trim(),
         }),
       });
+      const contentType = response.headers.get("content-type") ?? "";
 
-      const result = (await response.json().catch(() => ({ error: "Failed to parse response." }))) as DemoActionState;
-      setSeedState(result);
+      if (contentType.includes("application/json")) {
+        const result = (await response.json()) as DemoActionState;
+        setSeedState(
+          response.ok
+            ? result
+            : {
+                error: result.error ?? "Failed to create the demo event.",
+                details: result.details,
+              },
+        );
+      } else {
+        const text = await response.text().catch(() => "");
+        setSeedState({
+          error: response.ok ? "Unexpected response from demo endpoint." : "Demo endpoint returned a non-JSON error.",
+          details: text.slice(0, 500),
+        });
+      }
     } catch {
       setSeedState({ error: "Failed to create the demo event." });
     } finally {
