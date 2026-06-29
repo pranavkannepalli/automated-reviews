@@ -2,13 +2,17 @@ import { Client, Connection } from "@temporalio/client";
 import {
   REVIEWS_TASK_QUEUE,
   getInitialReviewWorkflowId,
+  getReviewRequestWorkflowIds,
   getReviewReminderWorkflowId,
   getTemporalClientConnectionOptions,
   getTemporalNamespace,
   startWorkflowOnce,
+  terminateReviewRequestWorkflows as terminateReviewRequestWorkflowsById,
   type ScheduleInitialReviewRequestInput,
   type ScheduleReviewReminderInput,
 } from "@automated-reviews/temporal";
+
+import { cleanupReviewRequestIfActive } from "./review-request-cleanup";
 
 let temporalClientPromise: Promise<Client | null> | null = null;
 
@@ -67,4 +71,25 @@ export async function scheduleReviewReminder(input: ScheduleReviewReminderInput)
   );
 
   return true;
+}
+
+export async function terminateReviewRequestWorkflows(
+  reviewRequestId: string,
+  reason = "Review request cleaned up.",
+) {
+  const client = await getTemporalClient();
+
+  if (client) {
+    await terminateReviewRequestWorkflowsById(
+      reviewRequestId,
+      async (workflowId, workflowReason) => {
+        await client.workflow.getHandle(workflowId).terminate(workflowReason);
+      },
+      reason,
+    );
+  }
+
+  await cleanupReviewRequestIfActive(reviewRequestId, reason);
+
+  return getReviewRequestWorkflowIds(reviewRequestId);
 }

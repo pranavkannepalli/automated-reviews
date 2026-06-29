@@ -8,6 +8,13 @@ export function getReviewReminderWorkflowId(reviewRequestId: string) {
   return `review-reminder-${reviewRequestId}`;
 }
 
+export function getReviewRequestWorkflowIds(reviewRequestId: string) {
+  return [
+    getInitialReviewWorkflowId(reviewRequestId),
+    getReviewReminderWorkflowId(reviewRequestId),
+  ];
+}
+
 export type ScheduleInitialReviewRequestInput = {
   reviewRequestId: string;
   delayMinutes: number;
