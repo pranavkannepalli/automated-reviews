@@ -1,8 +1,11 @@
 import { Client, Connection } from "@temporalio/client";
 import {
   REVIEWS_TASK_QUEUE,
+  getInitialReviewWorkflowId,
+  getReviewReminderWorkflowId,
   getTemporalClientConnectionOptions,
   getTemporalNamespace,
+  startWorkflowOnce,
   type ScheduleInitialReviewRequestInput,
   type ScheduleReviewReminderInput,
 } from "@automated-reviews/temporal";
@@ -32,13 +35,16 @@ export async function scheduleInitialReviewRequest(input: ScheduleInitialReviewR
     return false;
   }
 
-  const workflowId = input.workflowId ?? `review-request-${input.reviewRequestId}`;
+  const workflowId = input.workflowId ?? getInitialReviewWorkflowId(input.reviewRequestId);
 
-  await client.workflow.start("scheduleInitialReviewRequestWorkflow", {
-    taskQueue: REVIEWS_TASK_QUEUE,
-    workflowId,
-    args: [input],
-  });
+  await startWorkflowOnce(() =>
+    client.workflow.start("scheduleInitialReviewRequestWorkflow", {
+      taskQueue: REVIEWS_TASK_QUEUE,
+      workflowId,
+      workflowIdConflictPolicy: "USE_EXISTING",
+      args: [input],
+    }),
+  );
 
   return true;
 }
@@ -49,13 +55,16 @@ export async function scheduleReviewReminder(input: ScheduleReviewReminderInput)
     return false;
   }
 
-  const workflowId = input.workflowId ?? `review-reminder-${input.reviewRequestId}`;
+  const workflowId = input.workflowId ?? getReviewReminderWorkflowId(input.reviewRequestId);
 
-  await client.workflow.start("scheduleReviewReminderWorkflow", {
-    taskQueue: REVIEWS_TASK_QUEUE,
-    workflowId,
-    args: [input],
-  });
+  await startWorkflowOnce(() =>
+    client.workflow.start("scheduleReviewReminderWorkflow", {
+      taskQueue: REVIEWS_TASK_QUEUE,
+      workflowId,
+      workflowIdConflictPolicy: "USE_EXISTING",
+      args: [input],
+    }),
+  );
 
   return true;
 }

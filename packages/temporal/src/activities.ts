@@ -11,8 +11,11 @@ import { createClient } from "@supabase/supabase-js";
 import { Client, Connection } from "@temporalio/client";
 import twilio from "twilio";
 
+import { getNextBeeperInboundReply, isBeeperPollingTerminalStatus } from "./beeper-replies";
 import { getTemporalClientConnectionOptions, getTemporalNamespace } from "./config";
-import { REVIEWS_TASK_QUEUE } from "./shared";
+import { claimInboundBeeperMessage, insertMessageEvent } from "./message-events";
+import { getReviewReminderWorkflowId, REVIEWS_TASK_QUEUE } from "./shared";
+import { startWorkflowOnce } from "./workflow-start";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -107,16 +110,9 @@ async function sendBeeperMessage(to: string, body: string) {
   };
 }
 
-type BeeperMessage = {
-  id: string;
-  isSender: boolean;
-  timestamp: string;
-  text?: string;
-};
-
 // Beeper has no inbound webhook, only a WS live-events stream, so replies
 // are picked up by polling this on a loop from checkBeeperReplies instead.
-async function listBeeperMessages(chatID: string): Promise<BeeperMessage[]> {
+async function listBeeperMessages(chatID: string) {
   const response = await fetch(`${beeperApiUrl}/v1/chats/${chatID}/messages`, {
     headers: beeperHeaders(),
   });
@@ -143,11 +139,14 @@ function getTemporalClient() {
 
 async function scheduleReviewReminder(reviewRequestId: string) {
   const client = await getTemporalClient();
-  await client.workflow.start("scheduleReviewReminderWorkflow", {
-    taskQueue: REVIEWS_TASK_QUEUE,
-    workflowId: `review-reminder-${reviewRequestId}`,
-    args: [{ reviewRequestId, delayHours: 48 }],
-  });
+  await startWorkflowOnce(() =>
+    client.workflow.start("scheduleReviewReminderWorkflow", {
+      taskQueue: REVIEWS_TASK_QUEUE,
+      workflowId: getReviewReminderWorkflowId(reviewRequestId),
+      workflowIdConflictPolicy: "USE_EXISTING",
+      args: [{ reviewRequestId, delayHours: 48 }],
+    }),
+  );
 }
 
 function getSupabase() {
@@ -210,10 +209,6 @@ async function getRequestBundle(reviewRequestId: string) {
     customer,
     feedback,
   };
-}
-
-async function insertMessageEvent(supabase: any, payload: Record<string, unknown>) {
-  await supabase.from("message_events").insert(payload);
 }
 
 export async function sendInitialReviewRequest(
@@ -290,7 +285,7 @@ export async function checkBeeperReplies(reviewRequestId: string): Promise<{ don
 
   const { supabase, reviewRequest, organization, settings, customer } = await getRequestBundle(reviewRequestId);
 
-  if (!customer?.phone || ["responded", "review_prompt_sent"].includes(reviewRequest.status)) {
+  if (!customer?.phone || isBeeperPollingTerminalStatus(reviewRequest.status)) {
     return { done: true };
   }
 
@@ -303,21 +298,20 @@ export async function checkBeeperReplies(reviewRequestId: string): Promise<{ don
     .eq("review_request_id", reviewRequestId)
     .eq("provider", "beeper")
     .eq("direction", "inbound");
-  const seenIds = new Set((seenRows ?? []).map((row: any) => row.provider_message_sid).filter(Boolean));
+  const seenIds = new Set<string>(
+    (seenRows ?? []).map((row: any) => row.provider_message_sid).filter(Boolean),
+  );
 
-  const newInbound = messages
-    .filter((message) => !message.isSender && message.text && !seenIds.has(message.id))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-  for (const message of newInbound) {
+  const nextInbound = getNextBeeperInboundReply(messages, seenIds);
+  if (nextInbound) {
     await handleInboundReply({
       supabase,
       reviewRequest,
       organization,
       settings,
       customer,
-      messageId: message.id,
-      body: message.text!,
+      messageId: nextInbound.id,
+      body: nextInbound.text!,
     });
   }
 
@@ -327,7 +321,7 @@ export async function checkBeeperReplies(reviewRequestId: string): Promise<{ don
     .eq("id", reviewRequestId)
     .maybeSingle();
 
-  return { done: refreshed ? ["responded", "review_prompt_sent"].includes(refreshed.status) : true };
+  return { done: refreshed ? isBeeperPollingTerminalStatus(refreshed.status) : true };
 }
 
 // Mirrors the inbound-reply handling in apps/web/src/lib/webhooks.ts
@@ -351,7 +345,7 @@ async function handleInboundReply({
   messageId: string;
   body: string;
 }) {
-  await insertMessageEvent(supabase, {
+  const claimed = await claimInboundBeeperMessage(supabase, {
     organization_id: reviewRequest.organization_id,
     review_request_id: reviewRequest.id,
     payment_event_id: reviewRequest.payment_event_id,
@@ -364,6 +358,10 @@ async function handleInboundReply({
     message_body: body,
     occurred_at: new Date().toISOString(),
   });
+
+  if (!claimed) {
+    return;
+  }
 
   const parsed = await analyzeReplyMessage(body);
 

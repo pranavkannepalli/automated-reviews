@@ -2,6 +2,10 @@ import {
   buildInitialReviewTriggerRequest,
   buildReminderTriggerRequest,
 } from "@automated-reviews/core";
+import {
+  getInitialReviewWorkflowId,
+  getReviewReminderWorkflowId,
+} from "@automated-reviews/temporal";
 
 import { getInternalAppUrl } from "./env";
 import { scheduleInitialReviewRequest, scheduleReviewReminder } from "./temporal";
@@ -16,15 +20,11 @@ type ReminderTriggerInput = {
   delayHours: number;
 };
 
-function buildWorkflowId(mode: "initial" | "reminder", reviewRequestId: string) {
-  return `${mode}-${reviewRequestId}-${Date.now()}`;
-}
-
 export async function triggerInitialReviewRequest({
   reviewRequestId,
   delayMinutes,
 }: InitialTriggerInput) {
-  const workflowId = buildWorkflowId("initial", reviewRequestId);
+  const workflowId = getInitialReviewWorkflowId(reviewRequestId);
   const queued = await scheduleInitialReviewRequest({
     reviewRequestId,
     delayMinutes,
@@ -48,7 +48,7 @@ export async function triggerReviewReminder({
   reviewRequestId,
   delayHours,
 }: ReminderTriggerInput) {
-  const workflowId = buildWorkflowId("reminder", reviewRequestId);
+  const workflowId = getReviewReminderWorkflowId(reviewRequestId);
   const queued = await scheduleReviewReminder({
     reviewRequestId,
     delayHours,

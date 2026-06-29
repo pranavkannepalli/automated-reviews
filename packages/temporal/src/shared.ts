@@ -1,5 +1,13 @@
 export const REVIEWS_TASK_QUEUE = "automated-reviews";
 
+export function getInitialReviewWorkflowId(reviewRequestId: string) {
+  return `review-request-${reviewRequestId}`;
+}
+
+export function getReviewReminderWorkflowId(reviewRequestId: string) {
+  return `review-reminder-${reviewRequestId}`;
+}
+
 export type ScheduleInitialReviewRequestInput = {
   reviewRequestId: string;
   delayMinutes: number;
