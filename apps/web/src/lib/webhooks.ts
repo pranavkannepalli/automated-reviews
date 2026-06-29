@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 
-import { analyzeReplyMessage, normalizeSquarePayment } from "@automated-reviews/core";
+import {
+  ACTIVE_REVIEW_REQUEST_STATUSES,
+  analyzeReplyMessage,
+  normalizeSquarePayment,
+} from "@automated-reviews/core";
 
 import { getAppUrl, hasBeeperEnv, hasTwilioEnv } from "./env";
 import { triggerInitialReviewRequest, triggerReviewReminder } from "./internal-trigger";
@@ -210,6 +214,38 @@ export async function processSquareWebhook(
     return { ignored: true, reason: "Payment event did not include a usable phone number." };
   }
 
+  if (customerId) {
+    const { data: activeReviewRequest, error: activeReviewRequestError } = await supabase
+      .from("review_requests")
+      .select("id")
+      .eq("organization_id", setting.organization_id)
+      .eq("customer_id", customerId)
+      .in("status", [...ACTIVE_REVIEW_REQUEST_STATUSES])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activeReviewRequestError) {
+      throw activeReviewRequestError;
+    }
+
+    if (activeReviewRequest) {
+      await supabase.from("message_events").insert({
+        organization_id: setting.organization_id,
+        review_request_id: activeReviewRequest.id,
+        payment_event_id: paymentEvent.id,
+        customer_id: customerId,
+        provider: "system",
+        direction: "internal",
+        message_type: "review_request_reused",
+        status: "deduped",
+        occurred_at: new Date().toISOString(),
+      });
+
+      return { created: false, reviewRequestId: activeReviewRequest.id, scheduled: true };
+    }
+  }
+
   const { data: reviewRequest, error: reviewRequestError } = await supabase
     .from("review_requests")
     .insert({
@@ -380,7 +416,7 @@ export async function processTwilioWebhook(values: Record<string, string>, revie
     .select("id, payment_event_id, tracking_token, review_destination_url")
     .eq("organization_id", organizationSetting.organization_id)
     .eq("customer_id", customer?.id ?? "")
-    .in("status", ["queued", "sent", "delivered", "awaiting_follow_up"])
+    .in("status", [...ACTIVE_REVIEW_REQUEST_STATUSES])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
